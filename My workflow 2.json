@@ -1,0 +1,109 @@
+{
+  "name": "My workflow 2",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 20,
+        "simple": false,
+        "filters": {
+          "labelIds": [
+            "INBOX",
+            "CATEGORY_PERSONAL"
+          ],
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "12295430-78de-45fc-a783-9dd86696f1af",
+      "name": "Get many messages",
+      "webhookId": "6f2544de-e31c-4826-8850-57cdf3a3721c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bF9SKWatyOPuGg8Z",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "soodman4@gmail.com",
+        "subject": "Unread Emails",
+        "message": "={{ $json.allEmails }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        640,
+        0
+      ],
+      "id": "4cea65f7-af26-4ab2-b530-b247bc8197e7",
+      "name": "Send a message",
+      "webhookId": "5e7948cf-cdcc-49b0-b405-8c68806e6002",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bF9SKWatyOPuGg8Z",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nlet emails = \"\";\nfor (const item of $input.all()) {\n  emails += `<h2 style=\"font-weight: bold; font-size: 1.5em; margin-bottom: 5px;\">${item.json.subject}</h2>\n    <p><strong>From:</strong> ${item.json.from.value[0].address}</p>\n    <p><strong>To:</strong> ${item.json.to.value[0].address}</p>\n    <div>${item.json.textAsHtml}</div>\n    <hr style=\"margin: 20px 0; border: 1px solid #ccc;\">\n  `;\n}\n\nreturn [\n  {json: {allEmails: emails}}\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "8918c844-c08b-4729-bdaa-69977b3259e4",
+      "name": "Code"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "cf910a31-92ed-47ef-91b2-c21e40e2e90f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ec097ac876277ba7f879af0d66fc385af1beb23c9d9d1d449ae4934b4b312f0a"
+  },
+  "id": "symEa0rJ4L6D6tni",
+  "tags": []
+}

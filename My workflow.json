@@ -1,0 +1,519 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "AIzaSyCxkO080p3rfmI-Xj9EAcpVT3ygtCLWr6w"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "=application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"You are an assistant that always returns valid JSON only. Do NOT use triple backticks or any markdown formatting.\\n\\nUse Google Search whenever possible. Your task is to decide whether the user's request is about scheduling an event, about viewing emails, or something else.\\n\\nToday's date and time (IST) is: {{$json.date}}\\n\\nIf the request IS about scheduling an event:\\n- Always use valid RFC3339 timestamps with Asia/Kolkata timezone (+05:30)\\n- If the request does not specify a date, use today's date from {{$json.date}}\\n- If only a time is given, keep the date as today's date\\n- If no end time is given, set it to exactly 1 hour after the start time\\n\\n- If the user request is to schedule a meeting (mentions 'meeting', 'schedule a meeting', 'book a meeting', 'set up a meeting'):\\n  - Respond with JSON where \\\"type\\\" is \\\"schedule with meet\\\"\\n  - Example format:\\n    {\\\"type\\\": \\\"schedule with meet\\\", \\\"title\\\": \\\"Event title\\\", \\\"description\\\": \\\"Event description\\\", \\\"start\\\": \\\"YYYY-MM-DDTHH:MM:SS+05:30\\\", \\\"end\\\": \\\"YYYY-MM-DDTHH:MM:SS+05:30\\\", \\\"reply\\\": \\\"Confirmation message for email\\\"}\\n\\n- Otherwise, if it is a regular event (not a meeting):\\n  - Respond with JSON where \\\"type\\\" is \\\"schedule\\\"\\n  - Example format:\\n    {\\\"type\\\": \\\"schedule\\\", \\\"title\\\": \\\"Event title\\\", \\\"description\\\": \\\"Event description\\\", \\\"start\\\": \\\"YYYY-MM-DDTHH:MM:SS+05:30\\\", \\\"end\\\": \\\"YYYY-MM-DDTHH:MM:SS+05:30\\\", \\\"reply\\\": \\\"Confirmation message for email\\\"}\\n\\nIf the request IS about viewing emails (e.g., user says 'show my emails', 'check inbox', 'see my mails'):\\n- Respond ONLY with this JSON:\\n  {\\\"type\\\": \\\"send mails\\\"}\\n\\nIf the request is NOT about scheduling or viewing emails:\\n- Respond ONLY with JSON in this exact format:\\n  {\\\"type\\\": \\\"regular\\\", \\\"reply\\\": \\\"Your direct answer to the request\\\"}\\n\\nUser request: {{$json.prompt}}\"\n        }\n      ]\n    }\n  ],\n  \"tools\": [\n    {\n      \"google_search\": {}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -880,
+        -304
+      ],
+      "id": "b6d2c075-4f26-42a6-ad04-1265d2ed8fbe",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1460be25-1b13-4cc3-94fb-acabc957701d",
+              "leftValue": "={{$json[\"type\"]}}",
+              "rightValue": "schedule with meet",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -432,
+        -304
+      ],
+      "id": "5b1955e5-d48b-486a-b197-6941d6670aa8",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"prompt\": \"Send me my emails\",\n  \"date\": \"{{ $now.setZone(\"Asia/Kolkata\").toISO() }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1024,
+        -304
+      ],
+      "id": "75ac638c-577e-47c0-a4e5-6f3dd5c620f3",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "sendTo": "soodman4@gmail.com",
+        "subject": "={{ $('Code').item.json.type }}",
+        "message": "={{ $('If1').item.json.data }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        336,
+        -320
+      ],
+      "id": "3632b2d6-a11e-4f2e-82c0-779ec29a5031",
+      "name": "Send a message",
+      "webhookId": "cb31d3b7-df4a-47b5-b4d4-a17b7814bb43",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bF9SKWatyOPuGg8Z",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let raw = $input.first().json.candidates[0].content.parts[0].text;\n\n// Remove ```json at start and ``` at end\nraw = raw.replace(/^```json\\s*/, '').replace(/```$/, '');\n\nlet data = JSON.parse(raw);\n\nreturn [\n  { json: data }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -736,
+        -304
+      ],
+      "id": "0bfc1e41-9d3a-4ffd-bd81-c9569bc01d89",
+      "name": "Code",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "sendTo": "soodman4@gmail.com",
+        "subject": "Gemini Reply",
+        "message": "={{ $json.data }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        368,
+        208
+      ],
+      "id": "8606427e-620e-4013-b4d9-21b1a7e0ec50",
+      "name": "Send a message1",
+      "webhookId": "d6213ae9-391d-4cb3-9406-dc8a569215e8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bF9SKWatyOPuGg8Z",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "soodman4@gmail.com",
+          "mode": "list",
+          "cachedResultName": "soodman4@gmail.com"
+        },
+        "start": "={{ $json.start }}",
+        "end": "={{ $json.end }}",
+        "additionalFields": {
+          "conferenceDataUi": {
+            "conferenceDataValues": {
+              "conferenceSolution": "=hangoutsMeet"
+            }
+          },
+          "description": "={{ $json.description }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        208,
+        -320
+      ],
+      "id": "1edff7f6-c924-47be-95d6-c94f4dd03fcc",
+      "name": "Create an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "yJ0ySWMDyC8dtYo1",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4826233e-ab90-460b-94e4-461cca97ed5d",
+              "leftValue": "={{ $json.type }}",
+              "rightValue": "schedule",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -176,
+        -144
+      ],
+      "id": "059617ad-4f98-431e-aa68-1066af618794",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "soodman4@gmail.com",
+          "mode": "list",
+          "cachedResultName": "soodman4@gmail.com"
+        },
+        "start": "={{ $json.start }}",
+        "end": "={{ $json.end }}",
+        "additionalFields": {
+          "description": "={{ $json.description }}",
+          "summary": "={{ $json.title }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        304,
+        -160
+      ],
+      "id": "e10e97ef-67fc-4a3e-9701-f8f9643e4ed3",
+      "name": "Create an event1",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "yJ0ySWMDyC8dtYo1",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "soodman4@gmail.com",
+        "subject": "={{ $('If').item.json.type }}",
+        "message": "={{ $('If').item.json.data }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        -160
+      ],
+      "id": "6de53a5f-a1d0-4840-a599-82cb3b1ac309",
+      "name": "Send a message2",
+      "webhookId": "82b016e5-19b2-4f83-92c8-949b45d43400",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bF9SKWatyOPuGg8Z",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1152,
+        -304
+      ],
+      "id": "5a182c51-9d55-4ead-ad13-f10bf821230d",
+      "name": "Schedule Trigger1"
+    },
+    {
+      "parameters": {
+        "mode": "markdownToHtml",
+        "markdown": "={{ $json.reply }}",
+        "options": {
+          "simplifiedAutoLink": true,
+          "backslashEscapesHTMLTags": true,
+          "completeHTMLDocument": true,
+          "emoji": true,
+          "ghCodeBlocks": true
+        }
+      },
+      "type": "n8n-nodes-base.markdown",
+      "typeVersion": 1,
+      "position": [
+        -592,
+        -304
+      ],
+      "id": "9d068dfd-9c6b-47d0-a11b-f32d590ab9a8",
+      "name": "Markdown1"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "symEa0rJ4L6D6tni",
+          "mode": "list",
+          "cachedResultName": "My workflow 2"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        352,
+        32
+      ],
+      "id": "1511919b-8bd1-482d-95c7-e52d80e6baee",
+      "name": "Execute Workflow"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c31db193-9e66-42f5-9450-d4c1438401d9",
+              "leftValue": "={{ $json.type }}",
+              "rightValue": "send mails",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        48,
+        48
+      ],
+      "id": "40dd9237-17c5-4e05-b568-d3485a1ff749",
+      "name": "If2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Create an event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Markdown1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Create an event1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event1": {
+      "main": [
+        [
+          {
+            "node": "Send a message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Markdown1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Execute Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "51350b84-fb3f-43dd-a521-cb7901c6ebca",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ec097ac876277ba7f879af0d66fc385af1beb23c9d9d1d449ae4934b4b312f0a"
+  },
+  "id": "Yx7vClkXTyiff6aF",
+  "tags": []
+}
